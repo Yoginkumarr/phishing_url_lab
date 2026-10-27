@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>URL Safety Lab — Phishing Classifier</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #101522;
+      color: #edf2ff;
+      min-height: 100vh;
+    }
+
+    .shell {
+      max-width: 870px;
+      padding: 64px 24px;
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: #91a4c8;
+      font-weight: 700;
+    }
+
+    h1 {
+      font-size: clamp(32px, 6vw, 52px);
+      margin: 13px 0;
+      letter-spacing: -.04em;
+      line-height: 1.04;
+    }
+
+    .lead {
+      line-height: 1.6;
+      color: #aebbd3;
+      max-width: 650px;
+      margin-bottom: 30px;
+    }
+
+    .panel {
+      border: 1px solid #303d57;
+      background: #182235;
+      border-radius: 20px;
+      padding: 26px;
+      box-shadow: 0 14px 40px #070b1480;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 650;
+      margin-bottom: 11px;
+    }
+
+    .field {
+      display: flex;
+      gap: 10px;
+    }
+
+    input {
+      min-width: 0;
+      flex: 1;
+      background: #0e1625;
+      color: #fff;
+      border: 1px solid #3c4b66;
+      border-radius: 10px;
+      padding: 15px 14px;
+      font-size: 15px;
+    }
+
+    input:focus {
+      outline: 2px solid #7aabff;
+      outline-offset: 2px;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      background: #8ab8ff;
+      color: #081324;
+      font-weight: 750;
+      border-radius: 10px;
+      padding: 13px 23px;
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 18px 0 0;
+      color: #c1cee5;
+      font-size: 14px;
+    }
+
+    .toggle input {
+      flex: none;
+      width: 16px;
+      height: 16px;
+    }
+
+    .result {
+      margin-top: 22px;
+      display: none;
+    }
+
+    .result.visible {
+      display: block;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      font-size: 22px;
+      font-weight: 750;
+    }
+
+    .number {
+      font-size: 28px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+
+    .danger {
+      color: #ff929e;
+    }
+
+    .good {
+      color: #85e2bb;
+    }
+
+    .caution {
+      color: #ffd18a;
+    }
+
+    .track {
+      width: 100%;
+      height: 11px;
+      background: #2c3750;
+      overflow: hidden;
+      border-radius: 20px;
+      margin: 18px 0 6px;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      background: #8ab8ff;
+      transition: width .3s ease;
+    }
+
+    .help {
+      font-size: 12px;
+      color: #9eaecb;
+      line-height: 1.6;
+    }
+
+    .warning {
+      border-top: 1px solid #303d57;
+      margin-top: 19px;
+      padding-top: 16px;
+      color: #b5c3dd;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: space-between;
+      border-bottom: 1px solid #2e3a53;
+      padding: 10px 0;
+      font-size: 13px;
+    }
+
+    .impact {
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    h2 {
+      font-size: 17px;
+      margin: 27px 0 7px;
+    }
+
+    #error {
+      min-height: 20px;
+      color: #ff929e;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    @media(max-width:570px) {
+      .shell {
+        padding: 36px 16px;
+      }
+
+      .panel {
+        padding: 18px;
+      }
+
+      .field {
+        flex-direction: column;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="shell">
+    <div class="eyebrow">AIS-lab project </div>
+    <h1>Phishing URL analysis</h1>
+
+    <section class="panel">
+      <form id="predict-form">
+        <label for="url">URL to analyze</label>
+        <div class="field">
+          <input id="url" name="url" type="text" inputmode="url" maxlength="8192" autocomplete="off" spellcheck="false"
+            placeholder="https://example.org/login" required />
+          <button id="submit" type="submit">Analyze URL</button>
+        </div>
+        <label class="toggle"><input id="explain" type="checkbox" checked /> Show SHAP explanation</label>
+        <div id="error" role="alert" aria-live="polite"></div>
+      </form>
+      <section id="result" class="result" aria-live="polite">
+        <div class="top">
+          <div>
+            <div class="eyebrow">Classification</div>
+            <div id="status" class="status">—</div>
+          </div>
+          <div>
+            <div class="eyebrow">Phishing model score</div>
+            <div id="prob" class="number">—</div>
+          </div>
+        </div>
+        <div class="track">
+          <div id="fill" class="fill"></div>
+        </div>
+        <div class="help"></div>
+        <div id="explain-list"></div>
+        <p class="warning" id="warning"></p>
+      </section>
+    </section>
+  </main>
+  <script>
+    const form = document.getElementById('predict-form');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = document.getElementById('submit');
+      const error = document.getElementById('error');
+      const result = document.getElementById('result');
+      result.classList.remove('visible'); error.textContent = ''; button.disabled = true; button.textContent = 'Analyzing…';
+      try {
+        const response = await fetch('/api/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: document.getElementById('url').value, explain: document.getElementById('explain').checked }) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Request failed');
+        const score = Number(data.phishing_score);
+        const status = document.getElementById('status');
+        status.textContent = data.decision;
+        status.className = 'status ' + (data.decision === 'LIKELY PHISHING' ? 'danger' : data.decision === 'LIKELY LEGITIMATE' ? 'good' : 'caution');
+        document.getElementById('prob').textContent = (100 * score).toFixed(1) + '%';
+        document.getElementById('fill').style.width = (100 * score).toFixed(1) + '%';
+        document.getElementById('warning').textContent = data.warning;
+        const list = document.getElementById('explain-list'); list.replaceChildren();
+        if (Array.isArray(data.explanation)) {
+          const heading = document.createElement('h2'); heading.textContent = 'Top SHAP feature contributions'; list.appendChild(heading);
+          const p = document.createElement('div'); p.className = 'help'; p.textContent = ''; list.appendChild(p);
+          for (const item of data.explanation) {
+            const row = document.createElement('div'); row.className = 'feature';
+            const name = document.createElement('span'); name.textContent = item.feature + ' (' + item.value + ')';
+            const impact = document.createElement('span'); impact.className = 'impact ' + (item.impact_on_phishing_score > 0 ? 'danger' : 'good'); impact.textContent = (item.impact_on_phishing_score >= 0 ? '+' : '') + item.impact_on_phishing_score.toFixed(4);
+            row.append(name, impact); list.appendChild(row);
+          }
+        }
+        result.classList.add('visible');
+      } catch (e) { error.textContent = e.message || 'Error'; }
+      finally { button.disabled = false; button.textContent = 'Analyze URL'; }
+    });
+  </script>
+</body>
+
+</html>
